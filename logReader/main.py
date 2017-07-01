@@ -2,9 +2,11 @@
 import re
 import sys
 from time import time
+import os
 
 import yaml
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QDialog
 from PyQt5.uic import loadUi
 from dateutil import parser
@@ -13,7 +15,9 @@ __author__ = 'MyrikLD'
 __email__ = 'myrik260138@tut.by'
 __license__ = 'GPLv3'
 
-with open('default.yaml') as data:
+PATH = os.path.dirname(__file__)
+
+with open(PATH+'/default.yaml') as data:
 	config = yaml.load(data)
 
 pattern = config['pattern']
@@ -114,7 +118,7 @@ class DemoImpl(QMainWindow):
 	def __init__(self, *args):
 		super(DemoImpl, self).__init__(*args)
 
-		loadUi('ui.ui', self)
+		loadUi(PATH+'/ui.ui', self)
 		self.reApplyBtn.clicked.connect(self.reApply)
 		self.parApplyBtn.clicked.connect(self.parApply)
 		self.actionOpen.triggered.connect(self.openFile)
@@ -260,12 +264,18 @@ class MyTableModel(QAbstractTableModel):
 class Help(QDialog):
 	def __init__(self):
 		super().__init__()
-		loadUi('about.ui', self)
+		loadUi(PATH+'/about.ui', self)
 		self.show()
 
+widget = None
 
-if __name__ == '__main__':
+def main():
+	global widget
 	app = QApplication(sys.argv)
 	widget = DemoImpl()
 	widget.show()
 	sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+	main()
