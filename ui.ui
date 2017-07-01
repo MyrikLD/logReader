@@ -13,6 +13,9 @@
   <property name="windowTitle">
    <string>LogReader</string>
   </property>
+  <property name="locale">
+   <locale language="English" country="UnitedStates"/>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <property name="leftMargin">
@@ -153,7 +156,7 @@
           </item>
           <item>
            <property name="text">
-            <string>Разница</string>
+            <string>Difference</string>
            </property>
           </item>
          </widget>

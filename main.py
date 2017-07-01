@@ -5,10 +5,13 @@ from time import time
 
 import yaml
 from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QWidget, QPushButton, QLineEdit
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QDialog
 from PyQt5.uic import loadUi
 from dateutil import parser
+
+__author__ = 'MyrikLD'
+__email__ = 'myrik260138@tut.by'
+__license__ = 'GPLv3'
 
 with open('default.yaml') as data:
 	config = yaml.load(data)
@@ -217,12 +220,7 @@ class DemoImpl(QMainWindow):
 			self.readFile(fname)
 
 	def help(self):
-		help = QTextEdit()
-		help = QText
-		# help->setWindowFlag(Window)
-		help.setReadOnly(True)
-		help.append("<h1>Help</h1>Welcom to my help.<br/> Hope you like it.")
-		help.show()
+		self.helpWindow = Help()
 
 
 class MyTableModel(QAbstractTableModel):
@@ -253,33 +251,21 @@ class MyTableModel(QAbstractTableModel):
 		itm = self.arraydata.get(index.row(), self.headerdata[index.column()], widget.dfBox.currentIndex())
 		return QVariant(itm)
 
-	def headerData(self, col, orientation, role):
+	def headerData(self, section, orientation, role):
 		if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-			return QVariant(self.headerdata[col])
+			return QVariant(self.headerdata[section])
 		return QVariant()
 
 
-class Example(QWidget):
+class Help(QDialog):
 	def __init__(self):
 		super().__init__()
-		self.initUI()
-
-	def initUI(self):
-		self.btn = QPushButton('Dialog', self)
-		self.btn.move(20, 20)
-		self.btn.clicked.connect(self.showDialog)
-
-		self.le = QLineEdit(self)
-		self.le.move(130, 22)
-
-		self.setGeometry(300, 300, 290, 150)
-		self.setWindowTitle('Input dialog')
+		loadUi('about.ui', self)
 		self.show()
 
 
 if __name__ == '__main__':
 	app = QApplication(sys.argv)
-	a = Example()
 	widget = DemoImpl()
 	widget.show()
 	sys.exit(app.exec_())
