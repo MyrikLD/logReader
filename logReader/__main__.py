@@ -23,9 +23,6 @@ HOME = os.path.expanduser("~")
 CONFIGPATH = None
 
 
-# pattern = config['pattern']
-
-
 def pattList(patt):
 	p = '(\(\?P<(?P<data>[\w]+)>[^)]+\))'
 	ret = re.findall(p, patt)
@@ -52,6 +49,7 @@ class dt(datetime):
 
 class Level(object):
 	config = None
+
 	def __init__(self, data=None):
 		self.text = str(data)
 		try:
@@ -205,8 +203,11 @@ class DemoImpl(QMainWindow):
 		if fn is None or len(fn) == 0:
 			return None
 		self.filename = fn
-		f = list(open(self.filename))
-		self.parseStrings(f)
+		try:
+			f = list(open(self.filename))
+			self.parseStrings(f)
+		except Exception as e:
+			print(e)
 
 	def parseStrings(self, data):
 		if len(data) == 0:
@@ -232,7 +233,7 @@ class DemoImpl(QMainWindow):
 		if len(data) > 0:
 			self.lineList = LineList(data)
 			self.upd()
-		self.tableView.verticalScrollBar().setValue(len(self.lineList))
+		self.tableView.scrollToBottom()
 
 	def lvlFilter(self):
 		return [Level(i) for i in filter(lambda x: self.box[x].isChecked(), self.box.keys())]
@@ -377,7 +378,6 @@ def main():
 		file = None
 	elif os.path.isfile(str(args.file)):
 		print('Input file: ' + str(args.file))
-
 
 	app = QApplication(sys.argv)
 	widget = DemoImpl(config=config, file=file)
