@@ -1,5 +1,5 @@
 from setuptools import setup
-from logReader.main import __version__, __author__, __email__, __license__
+from logReader.__main__ import __version__, __author__, __email__, __license__
 
 setup(name='logReader',
       version=__version__,
@@ -10,9 +10,10 @@ setup(name='logReader',
       license=__license__,
       packages=['logReader'],
       install_requires=['python-dateutil'],
-      entry_points={'console_scripts': ['logreader = logReader.main:main']},
+      entry_points={'console_scripts': ['logreader = logReader.__main__:main']},
       classifiers=['Intended Audience :: Developers',
                    'Natural Language :: English',
+                   'Development Status :: 3 - Alpha',
                    'Programming Language :: Python',
                    'Programming Language :: Python :: 2',
                    'Programming Language :: Python :: 2.7',
