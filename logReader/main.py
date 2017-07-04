@@ -1,7 +1,9 @@
 #!/bin/python3
+import argparse
 import os
 import re
 import sys
+from datetime import datetime
 from time import time
 
 import yaml
@@ -14,15 +16,15 @@ from dateutil import parser
 __author__ = 'MyrikLD'
 __email__ = 'myrik260138@tut.by'
 __license__ = 'GPLv3'
+__version__ = '0.7'
 
 PATH = os.path.dirname(__file__)
+HOME = os.path.expanduser("~")
+CONFIGPATH = None
+config = None
 
-with open(PATH + '/default.yaml') as data:
-	config = yaml.load(data)
 
-pattern = config['pattern']
-colors = config['colors']
-lvls = config['levels']
+# pattern = config['pattern']
 
 
 def pattList(patt):
@@ -31,13 +33,35 @@ def pattList(patt):
 	return [i[1] for i in ret]
 
 
+class dt(datetime):
+	def show(self, var=0):
+		if isinstance(var, int):
+			if var == 0:
+				return str(self)
+			elif var == 1:
+				return str(self.date())
+			elif var == 2:
+				return str(self.time())
+			else:
+				return str(self)
+		return str(self - var)
+
+	@classmethod
+	def new(cls):
+		return cls.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+
 class Level(object):
-	def __init__(self, data):
+	def __init__(self, data=None):
 		self.text = str(data)
 		try:
-			self.num = lvls.index(self.text)
+			self.num = config['levels'].index(self.text)
 		except Exception:
-			self.num = 0
+			self.num = 1
+		try:
+			self.color = config['colors'][self.num]
+		except Exception:
+			self.color = 'white'
 
 	def __str__(self):
 		return str(self.text)
@@ -56,66 +80,66 @@ class Level(object):
 
 class LineList(list):
 	def filter(self, lf):
-		return LineList(filter(lambda x: x.get('level') in lf, self))
+		return LineList(filter(lambda x: x.level in lf, self))
 
-	def get(self, num, pole, tf=3):
-		i = self[num]
-		if type(pole) == list:
+
+class Line(object):
+	struct = {}
+	level = Level()
+	time = dt.new()
+	result = False
+
+	def __init__(self, data, patt=None):
+		self.text = data
+		if patt is not None:
+			self.parse(patt)
+
+	def parse(self, patt):
+		ret = re.match(patt, self.text, re.IGNORECASE)
+		if ret is None:
+			self.result = False
+			print('Regexp error: ' + self.text)
+			return self
+		ret = dict(ret.groupdict())
+		for key in list(ret.keys()):
+			if key == 'time':
+				self.time = parser.parse(ret[key], default=dt.new())
+				del ret[key]
+			elif key == 'level':
+				self.level = Level(ret[key])
+				del ret[key]
+		self.struct = dict(ret)
+		self.result = True
+		return self
+
+	def show(self, pole, tf=3):
+		if isinstance(pole, list):
 			m = list()
 			for p in pole:
-				if p.lower() == 'time':
-					if tf == 0:
-						m.append(str(i[p]))
-					elif tf == 1:
-						m.append(str(i[p].date()))
-					elif tf == 2:
-						m.append(str(i[p].time()))
-					elif tf == 3:
-						if num > 0:
-							m.append(str((i[p] - self[num - 1][p])))
-						else:
-							m.append(str(i[p]))
-				elif p.lower() == 'level':
-					m.append(str(i[p]))
+				if p == 'time':
+					m.append(self.time.show(tf))
+				elif p == 'level':
+					m.append(str(self.level))
 				else:
-					m.append(i[p])
+					m.append(str(self.struct[p]))
 			return m
 		else:
 			if pole == 'time':
-				if tf == 0:
-					return str(i[pole])
-				elif tf == 1:
-					return str(i[pole].date())
-				elif tf == 2:
-					return str(i[pole].time())
-				elif tf == 3:
-					if num > 0:
-						sub = i[pole] - self[num - 1][pole]
-						return str(sub)
-					else:
-						return str(i[pole])
+				return self.time.show(tf)
+			elif pole == 'level':
+				return str(self.level)
 			else:
-				return str(i[pole])
+				return str(self.struct[pole])
 
-	def parse(self, data, patt):
-		ret = re.match(patt, data, re.IGNORECASE)
-		if ret is None:
-			print('Regexp error')
-			return
-		ret = ret.groupdict()
-		for key in ret.keys():
-			if key == 'time':
-				ret[key] = parser.parse(ret[key])
-			elif key == 'level':
-				ret[key] = Level(ret[key])
-		self.append(dict(ret))
+	def __str__(self):
+		return str(self.text)
 
 
 class DemoImpl(QMainWindow):
-	lineList = None
+	lineList = LineList()
 	filename = None
 
-	def __init__(self, *args):
+	def __init__(self, file=None, *args):
 		super(DemoImpl, self).__init__(*args)
 
 		loadUi(PATH + '/ui.ui', self)
@@ -127,18 +151,22 @@ class DemoImpl(QMainWindow):
 		self.dfBox.currentIndexChanged.connect(self.upd)
 
 		self.box = dict()
-		self.box.update({lvls[0]: self.boxDEBUG})
-		self.box.update({lvls[1]: self.boxINFO})
-		self.box.update({lvls[2]: self.boxWARNING})
-		self.box.update({lvls[3]: self.boxERROR})
-		self.box.update({lvls[4]: self.boxCRITICAL})
+		self.box.update({config['levels'][0]: self.boxDEBUG})
+		self.box.update({config['levels'][1]: self.boxINFO})
+		self.box.update({config['levels'][2]: self.boxWARNING})
+		self.box.update({config['levels'][3]: self.boxERROR})
+		self.box.update({config['levels'][4]: self.boxCRITICAL})
 		for i in self.box.values():
 			i.clicked.connect(self.upd)
 
-		self.reLine.setText(pattern)
-		self.paramsList.setText(', '.join(pattList(pattern)))
+		self.pattern = config['pattern']
+		self.reLine.setText(self.pattern)
+		self.paramsList.setText(', '.join(pattList(self.pattern)))
 
 		self.upd()
+
+		if file is not None:
+			self.readFile(file)
 
 	def keyPressEvent(self, QKeyEvent):
 		mod, key = QKeyEvent.modifiers(), QKeyEvent.key()
@@ -172,7 +200,6 @@ class DemoImpl(QMainWindow):
 			if len(data) > 0:
 				self.parseStrings(data)
 
-
 	def readFile(self, fn):
 		if fn is None or len(fn) == 0:
 			return None
@@ -180,27 +207,31 @@ class DemoImpl(QMainWindow):
 		f = list(open(self.filename))
 		self.parseStrings(f)
 
-
-	def parseStrings(self, mas):
-		lc = 0
-		lp = 0
-		lineList = LineList()
+	def parseStrings(self, data):
+		if len(data) == 0:
+			return
+		if not Line(data[0], self.pattern).result:
+			print('Input data error')
+			return
 		self.Loading.setFormat('%p%')
 		self.Loading.setValue(0)
+		print('Parsing %i lines...' % (len(data)))
 		st = time()
-		for i in mas:
-			lineList.parse(i, pattern)
-			lc += 1
-			proc = (lc * 100) / len(mas)
-			if proc != lp:
-				lp = proc
-				self.Loading.setValue(lp)
+		data = [Line(i) for i in data]
+		self.Loading.setValue(1)
+		for i in range(len(data)):
+			data[i].parse(self.pattern)
+			proc = int(i * 100 / len(data))
+			if proc > self.Loading.value():
+				self.Loading.setValue(proc)
+		self.Loading.setValue(100)
 		st = time() - st
-		self.Loading.setFormat('Parsed %i lines in %f sec' % (len(mas), st))
-		if len(lineList) > 0:
-			self.lineList = lineList
+		print('Parsed %i lines in %f sec' % (len(data), st))
+		self.Loading.setFormat('Parsed %i lines in %f sec' % (len(data), st))
+		if len(data) > 0:
+			self.lineList = LineList(data)
 			self.upd()
-			self.tableView.verticalScrollBar().setValue(len(self.lineList))
+		self.tableView.verticalScrollBar().setValue(len(self.lineList))
 
 	def lvlFilter(self):
 		return [Level(i) for i in filter(lambda x: self.box[x].isChecked(), self.box.keys())]
@@ -213,28 +244,44 @@ class DemoImpl(QMainWindow):
 		self.tableView.setModel(self.tm)
 
 	def reApply(self):
-		pattern = str(self.reLine.text())
-		patstr = ', '.join(pattList(pattern))
-		self.paramsList.setText(patstr)
+		self.pattern = str(self.reLine.text())
+		self.paramsList.setText(', '.join(pattList(self.pattern)))
 
-		self.pattParse()
-		self.readFile(self.filename)
+		if len(self.lineList) == 0:
+			return
 
-	def pattParse(self):
-		global pattern
-		pattern = str(self.reLine.text())
-		self.header = self.paramsList.text().replace(' ', '').split(',')
+		print('Updating %i lines...' % len(self.lineList))
+		self.Loading.setFormat('%p%')
+		self.Loading.setValue(0)
+		st = time()
+
+		for i in range(len(self.lineList)):
+			proc = int(i * 100 / len(self.lineList))
+			if proc > self.Loading.value():
+				self.Loading.setValue(proc)
+			self.lineList[i].parse(self.pattern)
+
+		self.Loading.setValue(100)
+		st = time() - st
+		print('Updated %i lines in %f sec' % (len(self.lineList), st))
+		self.Loading.setFormat('Updated %i lines in %f sec' % (len(self.lineList), st))
+
+		self.upd()
 
 	def parApply(self):
-		self.pattParse()
+		a = self.paramsList.text().replace(' ', '').split(',')
+		b = pattList(self.pattern)
+		for i in a:
+			if i not in b:
+				print('Unknown param: ' + str(i))
+				return
 		self.upd()
 
 	def openFile(self):
 		dia = QFileDialog()
-		fname = dia.getOpenFileName(caption='Open file', directory='/home')[0]
+		fname = dia.getOpenFileName(caption='Open file', directory=HOME)[0]
 		dia.close()
 		if len(fname) > 0:
-			self.pattParse()
 			self.readFile(fname)
 
 	def help(self):
@@ -253,20 +300,22 @@ class MyTableModel(QAbstractTableModel):
 	def columnCount(self, parent):
 		return len(self.headerdata)
 
-	def data(self, index, role):
+	def data(self, index, role=None):
 		if not index.isValid():
 			return QVariant()
 		elif role != Qt.DisplayRole:
 			if role == Qt.ToolTipRole:
-				column = self.headerdata[index.column()]
-				df = widget.dfBox.currentIndex()
-				itm = self.arraydata.get(index.row(), column, df)
-				return QVariant(itm)
+				return self.data(index)
 			if role == Qt.BackgroundColorRole:
-				lvl = self.arraydata[index.row()].get('level', 0)
-				return QVariant(QColor(colors[lvl.num]))
+				lvl = self.arraydata[index.row()].level
+				return QVariant(QColor(lvl.color))
 			return QVariant()
-		itm = self.arraydata.get(index.row(), self.headerdata[index.column()], widget.dfBox.currentIndex())
+
+		tm = widget.dfBox.currentIndex()
+		if tm == 3 and index.row() > 0:
+			tm = self.arraydata[index.row() - 1].time
+
+		itm = self.arraydata[index.row()].show(self.headerdata[index.column()], tm)
 		return QVariant(itm)
 
 	def headerData(self, section, orientation, role):
@@ -285,13 +334,55 @@ class Help(QDialog):
 widget = None
 
 
-def main():
+def main(file=None):
 	global widget
 	app = QApplication(sys.argv)
-	widget = DemoImpl()
+	widget = DemoImpl(file=file)
 	widget.show()
 	sys.exit(app.exec_())
 
 
 if __name__ == '__main__':
-	main()
+	args = argparse.ArgumentParser(description='Logfile processing tool')
+	args.add_argument('-v', '--version', action='version', version='LogReader ' + str(__version__))
+	args.add_argument('-c', dest='config', help='config path')
+	args.add_argument('-f', dest='file', help='file path')
+	args = args.parse_args()
+
+	if args.config is not None and not os.path.isfile(str(args.config)):
+		print('Unavailable path: ' + str(args.config))
+	elif os.path.isfile(str(args.config)):
+		CONFIGPATH = args.config
+
+		with open(CONFIGPATH) as data:
+			print('Config file: ' + CONFIGPATH)
+			config = yaml.load(data)
+	elif os.path.isfile(HOME + '/.logreader'):
+		CONFIGPATH = HOME + '/.logreader'
+
+		with open(CONFIGPATH) as data:
+			print('Config file: ' + CONFIGPATH)
+			config = yaml.load(data)
+	else:
+		CONFIGPATH = PATH + '/default.yaml'
+
+		with open(CONFIGPATH) as data:
+			print('Default config file: ' + CONFIGPATH)
+			config = yaml.load(data)
+
+		if not os.path.isfile(HOME + '/.logreader'):
+			print('Create config file: ' + HOME + '/.logreader')
+			try:
+				with open(HOME + '/.logreader', 'w+') as outfile:
+					yaml.dump(config, outfile)
+			except Exception:
+				pass
+	file = None
+	if args.file is not None and not os.path.isfile(str(args.file)):
+		print('Unavailable path: ' + str(args.file))
+		main()
+	elif os.path.isfile(str(args.file)):
+		print('Input file: ' + str(args.file))
+		main(file=str(args.file))
+	else:
+		main()

@@ -1,12 +1,13 @@
 from setuptools import setup
+from logReader.main import __version__, __author__, __email__, __license__
 
 setup(name='logReader',
-      version='0.5',
+      version=__version__,
       description='PyQt5 programm for parse and reading any log file.',
       url='https://github.com/MyrikLD/logReader',
-      author='MyrikLD',
-      author_email='myrik260138@tut.by',
-      license='GPLv3',
+      author=__author__,
+      author_email=__email__,
+      license=__license__,
       packages=['logReader'],
       install_requires=['python-dateutil'],
       entry_points={'console_scripts': ['logreader = logReader.main:main']},
