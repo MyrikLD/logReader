@@ -141,9 +141,8 @@ class DemoImpl(QMainWindow):
 		self.upd()
 
 	def keyPressEvent(self, QKeyEvent):
-		mod, scan = QKeyEvent.nativeModifiers(), QKeyEvent.nativeScanCode()
-		print(mod, scan)
-		if mod in [20, 8212] and scan == 54:
+		mod, key = QKeyEvent.modifiers(), QKeyEvent.key()
+		if mod == Qt.ControlModifier and key == Qt.Key_C:
 			a = self.tableView.selectedIndexes()
 			if len(a) == 0:
 				return None
@@ -164,7 +163,7 @@ class DemoImpl(QMainWindow):
 			cb = QApplication.clipboard()
 			cb.clear(mode=cb.Clipboard)
 			cb.setText(text[:-1], mode=cb.Clipboard)
-		elif mod in [20, 8212] and scan == 55:
+		elif mod == Qt.ControlModifier and key == Qt.Key_V:
 			clipboard = QApplication.clipboard()
 			mimeData = clipboard.mimeData()
 			data = mimeData.text().split('\n')
@@ -185,12 +184,12 @@ class DemoImpl(QMainWindow):
 	def parseStrings(self, mas):
 		lc = 0
 		lp = 0
-		self.lineList = LineList()
+		lineList = LineList()
 		self.Loading.setFormat('%p%')
 		self.Loading.setValue(0)
 		st = time()
 		for i in mas:
-			self.lineList.parse(i, pattern)
+			lineList.parse(i, pattern)
 			lc += 1
 			proc = (lc * 100) / len(mas)
 			if proc != lp:
@@ -198,9 +197,10 @@ class DemoImpl(QMainWindow):
 				self.Loading.setValue(lp)
 		st = time() - st
 		self.Loading.setFormat('Parsed %i lines in %f sec' % (len(mas), st))
-
-		self.upd()
-		self.tableView.verticalScrollBar().setValue(len(self.lineList))
+		if len(lineList) > 0:
+			self.lineList = lineList
+			self.upd()
+			self.tableView.verticalScrollBar().setValue(len(self.lineList))
 
 	def lvlFilter(self):
 		return [Level(i) for i in filter(lambda x: self.box[x].isChecked(), self.box.keys())]
