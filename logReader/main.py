@@ -1,8 +1,8 @@
 #!/bin/python3
+import os
 import re
 import sys
 from time import time
-import os
 
 import yaml
 from PyQt5.QtCore import *
@@ -17,7 +17,7 @@ __license__ = 'GPLv3'
 
 PATH = os.path.dirname(__file__)
 
-with open(PATH+'/default.yaml') as data:
+with open(PATH + '/default.yaml') as data:
 	config = yaml.load(data)
 
 pattern = config['pattern']
@@ -118,14 +118,13 @@ class DemoImpl(QMainWindow):
 	def __init__(self, *args):
 		super(DemoImpl, self).__init__(*args)
 
-		loadUi(PATH+'/ui.ui', self)
+		loadUi(PATH + '/ui.ui', self)
 		self.reApplyBtn.clicked.connect(self.reApply)
 		self.parApplyBtn.clicked.connect(self.parApply)
 		self.actionOpen.triggered.connect(self.openFile)
 		self.actionHelp.triggered.connect(self.help)
 		self.actionExit.triggered.connect(lambda: exit(0))
-
-		self.reLine.setText(pattern)
+		self.dfBox.currentIndexChanged.connect(self.upd)
 
 		self.box = dict()
 		self.box.update({lvls[0]: self.boxDEBUG})
@@ -134,15 +133,17 @@ class DemoImpl(QMainWindow):
 		self.box.update({lvls[3]: self.boxERROR})
 		self.box.update({lvls[4]: self.boxCRITICAL})
 		for i in self.box.values():
-			i.clicked.connect(self.update)
-		self.dfBox.currentIndexChanged.connect(self.update)
+			i.clicked.connect(self.upd)
 
+		self.reLine.setText(pattern)
 		self.paramsList.setText(', '.join(pattList(pattern)))
-		self.update()
+
+		self.upd()
 
 	def keyPressEvent(self, QKeyEvent):
 		mod, scan = QKeyEvent.nativeModifiers(), QKeyEvent.nativeScanCode()
-		if mod == 20 and scan == 54:
+		print(mod, scan)
+		if mod in [20, 8212] and scan == 54:
 			a = self.tableView.selectedIndexes()
 			if len(a) == 0:
 				return None
@@ -163,38 +164,50 @@ class DemoImpl(QMainWindow):
 			cb = QApplication.clipboard()
 			cb.clear(mode=cb.Clipboard)
 			cb.setText(text[:-1], mode=cb.Clipboard)
+		elif mod in [20, 8212] and scan == 55:
+			clipboard = QApplication.clipboard()
+			mimeData = clipboard.mimeData()
+			data = mimeData.text().split('\n')
+			while '' in data:
+				data.remove('')
+			self.parseStrings(data)
+
 
 	def readFile(self, fn):
 		if fn is None or len(fn) == 0:
 			return None
 		self.filename = fn
-		f = open(self.filename)
+		f = list(open(self.filename))
+		self.parseStrings(f)
 
+
+	def parseStrings(self, mas):
 		lc = 0
 		lp = 0
 		self.lineList = LineList()
 		self.Loading.setFormat('%p%')
 		self.Loading.setValue(0)
-		f = list(f)
 		st = time()
-		for i in f:
+		for i in mas:
 			self.lineList.parse(i, pattern)
 			lc += 1
-			proc = (lc * 100) / len(f)
+			proc = (lc * 100) / len(mas)
 			if proc != lp:
 				lp = proc
 				self.Loading.setValue(lp)
 		st = time() - st
-		self.Loading.setFormat('Parsed %i lines in %f sec' % (len(list(f)), st))
-		self.update()
+		self.Loading.setFormat('Parsed %i lines in %f sec' % (len(mas), st))
+
+		self.upd()
+		self.tableView.verticalScrollBar().setValue(len(self.lineList))
 
 	def lvlFilter(self):
 		return [Level(i) for i in filter(lambda x: self.box[x].isChecked(), self.box.keys())]
 
-	def update(self):
+	def upd(self):
 		if self.lineList is None:
 			return
-
+		self.header = self.paramsList.text().replace(' ', '').split(',')
 		self.tm = MyTableModel(self.lineList.filter(self.lvlFilter()), self.header, self)
 		self.tableView.setModel(self.tm)
 
@@ -213,7 +226,7 @@ class DemoImpl(QMainWindow):
 
 	def parApply(self):
 		self.pattParse()
-		self.update()
+		self.upd()
 
 	def openFile(self):
 		dia = QFileDialog()
@@ -264,10 +277,12 @@ class MyTableModel(QAbstractTableModel):
 class Help(QDialog):
 	def __init__(self):
 		super().__init__()
-		loadUi(PATH+'/about.ui', self)
+		loadUi(PATH + '/about.ui', self)
 		self.show()
 
+
 widget = None
+
 
 def main():
 	global widget
