@@ -170,7 +170,8 @@ class DemoImpl(QMainWindow):
 			data = mimeData.text().split('\n')
 			while '' in data:
 				data.remove('')
-			self.parseStrings(data)
+			if len(data) > 0:
+				self.parseStrings(data)
 
 
 	def readFile(self, fn):
