@@ -16,7 +16,7 @@ from dateutil import parser
 __author__ = 'MyrikLD'
 __email__ = 'myrik260138@tut.by'
 __license__ = 'GPLv3'
-__version__ = '0.7.5'
+__version__ = '0.7.6'
 
 PATH = os.path.dirname(__file__)
 HOME = os.path.expanduser("~")
