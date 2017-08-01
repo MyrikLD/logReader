@@ -1,6 +1,6 @@
 # LogReader
 
-PyQt5 programm for parse and reading any log file
+PyQt5 programm for parsing and reading any log file
 
 ![Preview](docs/preview.png)
 
