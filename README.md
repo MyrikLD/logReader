@@ -10,3 +10,7 @@ Features:
 * Lines are lighlighted by level
 * 5 log levels
 * 4 variants of time output
+
+# Installation
+
+pip install logreader
